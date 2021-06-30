@@ -12,213 +12,107 @@
 
 #import "PrivacyScreenPlugin.h"
 
-
-
 static UIImageView *imageView;
-
-
 
 @implementation PrivacyScreenPlugin
 
-
-
-- (void)pluginInitialize
-
+- (void)pluginInitialize 
 {
-
-  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAppDidBecomeActive:)
-
-                                               name:UIApplicationDidBecomeActiveNotification object:nil];
-
-
-
-  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAppWillResignActive:)
-
-                                               name:UIApplicationWillResignActiveNotification object:nil];
-
+  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAppDidBecomeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
+  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAppWillResignActive:) name:UIApplicationWillResignActiveNotification object:nil];
 }
-
-
 
 - (void)onAppDidBecomeActive:(UIApplication *)application
-
 {
-
   if (imageView == NULL) {
-
     self.viewController.view.window.hidden = NO;
-
   } else {
-
     [imageView removeFromSuperview];
-
   }
-
 }
 
-
-
 - (void)onAppWillResignActive:(UIApplication *)application
-
 {
-
   CDVViewController *vc = (CDVViewController*)self.viewController;
-
   NSString *imgName = [self getImageName:self.viewController.interfaceOrientation delegate:(id<CDVScreenOrientationDelegate>)vc device:[self getCurrentDevice]];
-
   UIImage *splash = [UIImage imageNamed:imgName];
 
   if (splash == NULL) {
-
     imageView = NULL;
-
     self.viewController.view.window.hidden = YES;
-
   } else {
-
     imageView = [[UIImageView alloc]initWithFrame:[self.viewController.view bounds]];
-
     [imageView setImage:splash];
-
-      [self updateBounds];
-
-    
+    [self updateBounds];
 
     #ifdef __CORDOVA_4_0_0
-
-        [[UIApplication sharedApplication].keyWindow addSubview:imageView];
-
+      [[UIApplication sharedApplication].keyWindow addSubview:imageView];
     #else
-
-        [self.viewController.view addSubview:imageView];
-
+      [self.viewController.view addSubview:imageView];
     #endif
-
   }
-
 }
 
-
-
 - (void)updateBounds
-
 {
-
     if ([self isUsingCDVLaunchScreen]) {
-
-        // CB-9762's launch screen expects the image to fill the screen and be scaled using AspectFill.
-
-        CGSize viewportSize = [UIApplication sharedApplication].delegate.window.bounds.size;
-
-        imageView.frame = CGRectMake(0, 0, viewportSize.width, viewportSize.height);
-
-        imageView.contentMode = UIViewContentModeScaleAspectFill;
-
-        return;
-
+      // CB-9762's launch screen expects the image to fill the screen and be scaled using AspectFill.
+      CGSize viewportSize = [UIApplication sharedApplication].delegate.window.bounds.size;
+      imageView.frame = CGRectMake(0, 0, viewportSize.width, viewportSize.height);
+      imageView.contentMode = UIViewContentModeScaleAspectFill;
+      return;
     }
 
-
-
     UIImage* img = imageView.image;
-
     CGRect imgBounds = (img) ? CGRectMake(0, 0, img.size.width, img.size.height) : CGRectZero;
-
-
-
     CGSize screenSize = [self.viewController.view convertRect:[UIScreen mainScreen].bounds fromView:nil].size;
 
     UIInterfaceOrientation orientation = [UIApplication sharedApplication].statusBarOrientation;
-
     CGAffineTransform imgTransform = CGAffineTransformIdentity;
 
-
-
     /* If and only if an iPhone application is landscape-only as per
-
      * UISupportedInterfaceOrientations, the view controller's orientation is
-
      * landscape. In this case the image must be rotated in order to appear
-
      * correctly.
-
      */
 
     CDV_iOSDevice device = [self getCurrentDevice];
-
-    if (UIInterfaceOrientationIsLandscape(orientation) && !device.iPhone6Plus && !device.iPad && !device.iPhoneX)
-
-    {
-
+    if (UIInterfaceOrientationIsLandscape(orientation) && !device.iPhone6Plus && !device.iPad && !device.iPhoneX) {
         imgTransform = CGAffineTransformMakeRotation(M_PI / 2);
-
         imgBounds.size = CGSizeMake(imgBounds.size.height, imgBounds.size.width);
-
     }
-
-
 
     // There's a special case when the image is the size of the screen.
-
-    if (CGSizeEqualToSize(screenSize, imgBounds.size))
-
-    {
-
+    if (CGSizeEqualToSize(screenSize, imgBounds.size)) {
         CGRect statusFrame = [self.viewController.view convertRect:[UIApplication sharedApplication].statusBarFrame fromView:nil];
-
         if (!(IsAtLeastiOSVersion(@"7.0")))
-
         {
-
             imgBounds.origin.y -= statusFrame.size.height;
-
         }
-
     }
 
-    else if (imgBounds.size.width > 0)
-
-    {
-
+    else if (imgBounds.size.width > 0) {
         CGRect viewBounds = self.viewController.view.bounds;
-
         CGFloat imgAspect = imgBounds.size.width / imgBounds.size.height;
-
         CGFloat viewAspect = viewBounds.size.width / viewBounds.size.height;
 
         // This matches the behaviour of the native splash screen.
-
         CGFloat ratio;
-
-        if (viewAspect > imgAspect)
-
-        {
-
-            ratio = viewBounds.size.width / imgBounds.size.width;
-
+        if (viewAspect > imgAspect) {
+          ratio = viewBounds.size.width / imgBounds.size.width;
         }
-
-        else
-
-        {
-
-            ratio = viewBounds.size.height / imgBounds.size.height;
-
+        else {
+          ratio = viewBounds.size.height / imgBounds.size.height;
         }
 
         imgBounds.size.height *= ratio;
-
         imgBounds.size.width *= ratio;
-
     }
 
-
-
     imageView.transform = imgTransform;
-
     imageView.frame = imgBounds;
-
 }
+
 // Code below borrowed from the CDV splashscreen plugin @ https://github.com/apache/cordova-plugin-splashscreen
 // Made some adjustments though, becuase landscape splashscreens are not available for iphone < 6 plus
 - (CDV_iOSDevice) getCurrentDevice
