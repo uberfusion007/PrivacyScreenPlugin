@@ -15,7 +15,7 @@
 static UIImageView *imageView;
 
 @implementation PrivacyScreenPlugin
-
+ 
 - (void)pluginInitialize 
 {
   [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAppDidBecomeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
